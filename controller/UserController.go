@@ -8,7 +8,10 @@ import (
 	"ginEssential-hb/common"
 	"ginEssential-hb/model"
 	"ginEssential-hb/util"
+	"log"
 	"net/http"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/jinzhu/gorm"
 
@@ -40,16 +43,58 @@ func Register(c *gin.Context) {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "手机号已注册"})
 		return
 	}
-
+	// 密码加密
+	hashPwd, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "加密错误"})
+	}
 	// 创建用户
 	user := model.User{
 		Name:      name,
 		Telephone: telephone,
-		Password:  password,
+		Password:  string(hashPwd),
 	}
 	DB.Create(&user)
 	// 返回响应
-	c.JSON(http.StatusOK, gin.H{"msg": "注册成功"})
+	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "注册成功"})
+}
+
+func Login(c *gin.Context) {
+	DB := common.GetDB()
+	// 获取参数
+	password := c.PostForm("password")
+	telephone := c.PostForm("telephone")
+	// 验证数据
+	if len(telephone) != 11 {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "手机号必须11位"})
+		return
+	}
+
+	var user model.User
+	DB.Where("telephone = ?", telephone).First(&user)
+
+	// 验证手机号是否存在
+	if user.ID == 0 {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "用户不存在"})
+		return
+	}
+
+	// 验证密码是否正确
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "密码错误"})
+		return
+	}
+
+	// 发放 token
+	token, err := common.ReleaseToken(user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "系统异常"})
+		log.Printf("生成token异常，err:%v", err)
+		return
+	}
+
+	// 响应
+	c.JSON(http.StatusOK, gin.H{"code": 200, "data": token, "msg": "登录成功"})
 }
 
 func isTelephoneExist(db *gorm.DB, telephone string) bool {

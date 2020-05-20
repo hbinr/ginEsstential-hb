@@ -16,6 +16,7 @@ func main() {
 	defer db.Close()
 
 	r := gin.Default()
+	// 强制在控制台中输出颜色
 	r = router.CollectRoute(r)
 	panic(r.Run())
 }
