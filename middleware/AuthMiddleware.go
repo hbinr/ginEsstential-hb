@@ -9,6 +9,7 @@ package middleware
 import (
 	"ginEssential-hb/common"
 	"ginEssential-hb/model"
+	"ginEssential-hb/response"
 	"log"
 	"net/http"
 	"strings"
@@ -24,6 +25,7 @@ func AuthMiddleWare() gin.HandlerFunc {
 
 		// 验证格式：非空且以 "Bearer "  有空格，7个字符
 		if tokenStr == "" || !strings.HasPrefix(tokenStr, "Bearer ") {
+			response.Response(c, http.StatusUnauthorized, 401, nil, "权限不足")
 			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "权限不足"})
 			c.Abort() // 不再执行中间件之后的函数
 			return
@@ -36,7 +38,7 @@ func AuthMiddleWare() gin.HandlerFunc {
 		// 解析失败或token无效，也返回权限不足
 		if err != nil || !token.Valid {
 			log.Println("token解析失败或无效，err:", err)
-			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "权限不足"})
+			response.Response(c, http.StatusUnauthorized, 401, nil, "权限不足")
 			c.Abort() // 不再执行中间件之后的函数
 			return
 		}
@@ -49,7 +51,7 @@ func AuthMiddleWare() gin.HandlerFunc {
 		var user model.User
 		DB.First(&user, userId)
 		if user.ID == 0 {
-			c.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "权限不足"})
+			response.Response(c, http.StatusUnauthorized, 401, nil, "权限不足")
 			c.Abort() // 不再执行中间件之后的函数
 			return
 		}

@@ -8,20 +8,24 @@ import (
 	"fmt"
 	"ginEssential-hb/model"
 
-	"github.com/jinzhu/gorm"
+	"github.com/spf13/viper"
+
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/jinzhu/gorm"
 )
 
 var DB *gorm.DB
 
 func InitDB() *gorm.DB {
-	driverName := "mysql"
-	host := "localhost"
-	port := "3306"
-	database := "gf_pratice"
-	username := "root"
-	password := "123456"
-	charset := "utf8"
+	fmt.Println(viper.GetString("datasource.driverName"))
+	driverName := viper.GetString("datasource.driverName")
+	host := viper.GetString("datasource.host")
+	port := viper.GetString("datasource.port")
+	database := viper.GetString("datasource.database")
+	username := viper.GetString("datasource.username")
+	password := viper.GetString("datasource.password")
+	charset := viper.GetString("datasource.charset")
+
 	args := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=true&loc=Local",
 		username,
 		password,

@@ -6,7 +6,9 @@ package controller
 
 import (
 	"ginEssential-hb/common"
+	"ginEssential-hb/dto"
 	"ginEssential-hb/model"
+	"ginEssential-hb/response"
 	"ginEssential-hb/util"
 	"log"
 	"net/http"
@@ -27,11 +29,11 @@ func Register(c *gin.Context) {
 	telephone := c.PostForm("telephone")
 	// 数据验证
 	if len(telephone) != 11 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "手机号必须11位"})
+		response.Response(c, http.StatusUnprocessableEntity, 422, nil, "手机号必须11位")
 		return
 	}
 	if len(password) < 6 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "密码不能小于6位"})
+		response.Response(c, http.StatusUnprocessableEntity, 422, nil, "密码不能小于6位")
 		return
 	}
 
@@ -40,13 +42,13 @@ func Register(c *gin.Context) {
 		name = util.RandomString(10)
 	}
 	if isTelephoneExist(DB, telephone) {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "手机号已注册"})
+		response.Response(c, http.StatusUnprocessableEntity, 422, nil, "手机号已注册")
 		return
 	}
 	// 密码加密
 	hashPwd, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "加密错误"})
+		response.Response(c, http.StatusInternalServerError, 500, nil, "加密错误")
 	}
 	// 创建用户
 	user := model.User{
@@ -56,7 +58,7 @@ func Register(c *gin.Context) {
 	}
 	DB.Create(&user)
 	// 返回响应
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "注册成功"})
+	response.Success(c, nil, "注册成功")
 }
 
 // Login:登录
@@ -67,7 +69,7 @@ func Login(c *gin.Context) {
 	telephone := c.PostForm("telephone")
 	// 验证数据
 	if len(telephone) != 11 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "手机号必须11位"})
+		response.Response(c, http.StatusUnprocessableEntity, 422, nil, "手机号必须11位")
 		return
 	}
 
@@ -76,35 +78,36 @@ func Login(c *gin.Context) {
 
 	// 验证手机号是否存在
 	if user.ID == 0 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "用户不存在"})
+		response.Response(c, http.StatusUnprocessableEntity, 422, nil, "用户不存在")
 		return
 	}
 
 	// 验证密码是否正确
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "密码错误"})
-		return
+		response.Response(c, http.StatusBadRequest, 400, nil, "密码错误")
+
 	}
 
 	// 发放 token
 	token, err := common.ReleaseToken(user)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "系统异常"})
+		response.Response(c, http.StatusInternalServerError, 500, nil, "系统异常")
 		log.Printf("生成token异常，err:%v", err)
 		return
 	}
 
 	// 响应
-	c.JSON(http.StatusOK, gin.H{"code": 200, "data": token, "msg": "登录成功"})
+	response.Success(c, gin.H{"token": token}, "登录成功")
 }
 
 // Info:用户信息
 func Info(c *gin.Context) {
 	// 正确的处理:用户信息必须是经过认证的，因此从上下文中获取用户信息
 	user, _ := c.Get("user")
-	c.JSON(http.StatusOK, gin.H{"code": 200, "data": gin.H{"user": user}})
-
+	// user.(model.User) 将上下文中的 user 数据转成 实体对象
+	response.Success(c, gin.H{"code": 200, "data": gin.H{"user": dto.ToUserDto(user.(model.User))}}, "获取用户信息成功")
 }
+
 func isTelephoneExist(db *gorm.DB, telephone string) bool {
 	var user model.User
 	db.Where("telephone = ?", telephone).First(&user)
