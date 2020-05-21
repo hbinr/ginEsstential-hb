@@ -21,7 +21,7 @@ type Claims struct {
 // 注册成功后发放 token
 func ReleaseToken(user model.User) (string, error) {
 	// 设置过期时间  15 天
-	expirationTime := time.Now().Add(7 * 24 * 15)
+	expirationTime := time.Now().Add(7 * 24 * 15 * time.Hour)
 
 	claims := &Claims{
 		UserID: int(user.ID),
@@ -38,4 +38,15 @@ func ReleaseToken(user model.User) (string, error) {
 		return "", err
 	}
 	return tokeString, nil
+}
+
+// 解析 token
+func ParseToken(tokenStr string) (*jwt.Token, *Claims, error) {
+	claims := &Claims{}
+
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (i interface{}, err error) {
+		return jwtKey, nil
+	})
+	return token, claims, err
+
 }

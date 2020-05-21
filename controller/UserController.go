@@ -18,7 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 注册
+// Register:注册
 func Register(c *gin.Context) {
 	DB := common.GetDB()
 	// 获取参数
@@ -59,6 +59,7 @@ func Register(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "注册成功"})
 }
 
+// Login:登录
 func Login(c *gin.Context) {
 	DB := common.GetDB()
 	// 获取参数
@@ -97,6 +98,13 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 200, "data": token, "msg": "登录成功"})
 }
 
+// Info:用户信息
+func Info(c *gin.Context) {
+	// 正确的处理:用户信息必须是经过认证的，因此从上下文中获取用户信息
+	user, _ := c.Get("user")
+	c.JSON(http.StatusOK, gin.H{"code": 200, "data": gin.H{"user": user}})
+
+}
 func isTelephoneExist(db *gorm.DB, telephone string) bool {
 	var user model.User
 	db.Where("telephone = ?", telephone).First(&user)
